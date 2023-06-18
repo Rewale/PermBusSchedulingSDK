@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/net/html"
@@ -91,6 +92,8 @@ func (p *Parser) parserResult(text string) ([]*SearchResult, error) {
 	}
 }
 func (p *Parser) parseStops(text string) ([]*Direction, error) {
+	var wg sync.WaitGroup
+
 	var direction *Direction
 	var stop Stop
 	var isDirection bool
@@ -102,6 +105,7 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 		tt := tkn.Next()
 		switch tt {
 		case html.ErrorToken:
+			wg.Wait()
 			return result, nil
 		case html.StartTagToken:
 			t := tkn.Token()
@@ -139,7 +143,6 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 				name := strings.TrimSpace(tkn.Token().Data)
 				if name != "" {
 					stop.Name = name
-					// TODO: parse stop scheduling
 					direction.Stops = append(direction.Stops, stop)
 				}
 			}
@@ -148,7 +151,7 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 	}
 }
 
-func (p *Parser) parseStopScheduling(s *Stop) {
+func (p *Parser) parseStopScheduling(s Stop) {
 	schedulingHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, s.schedulingUrl))
 	if err != nil {
 		return
@@ -229,7 +232,8 @@ func (p *Parser) Search(query int) ([]*SearchResult, error) {
 	return p.parserResult(searchHtml)
 }
 
-func (p *Parser) Stops(search SearchResult) ([]*Direction, error) {
+// Выдает информацию о маршруте: его направления и остановки
+func (p *Parser) Stops(search *SearchResult) ([]*Direction, error) {
 	stopsHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, search.routeHref))
 	if err != nil {
 		return nil, err
