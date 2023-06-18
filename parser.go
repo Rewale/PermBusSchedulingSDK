@@ -3,7 +3,6 @@ package permbusscheduling
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -109,25 +108,23 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 				direction = new(Direction)
 				isDirection = true
 			} else if direction != nil && t.Data == "a" {
-				href := ""
 				for _, attr := range t.Attr {
 					if attr.Key == "href" {
-						href = attr.Val
-					}
-					if attr.Key == "class" && attr.Val == "ui-btn ui-btn-icon-right ui-icon-carat-r" {
+						href := attr.Val
+						if !strings.HasPrefix(href, "/time-table") {
+							isStops = false
+							continue
+						}
 						isStops = true
 						stop = Stop{
 							schedulingUrl: href,
 						}
-						log.Println("Stop found")
 					}
+					//<a href="/time-table/80/1701">
+					//Детский дом культуры им.Кирова
+					//</a>
 				}
-			} else if isStops {
-				isStops = false
-				result = append(result, direction)
-				direction = nil
 			}
-
 		case html.TextToken:
 			if isDirection {
 				direction.Name = strings.TrimSpace(tkn.Token().Data)
@@ -136,15 +133,23 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 			}
 			if direction != nil && isStops {
 				if direction.Stops == nil {
-					direction.Stops = make([]Stop, 10)
+					direction.Stops = make([]Stop, 0)
 				}
-				stop.Name = tkn.Token().Data
-				// TODO: parse stop scheduling
-				direction.Stops = append(direction.Stops, stop)
+				name := strings.TrimSpace(tkn.Token().Data)
+				if name != "" {
+					stop.Name = name
+					// TODO: parse stop scheduling
+					direction.Stops = append(direction.Stops, stop)
+
+				}
 			}
 
 		}
 	}
+}
+
+func (p *Parser) parseStopScheduling(s Stop) {
+
 }
 
 // Ищет на сайте расписания определенный номер маршрута и выдает список результатов

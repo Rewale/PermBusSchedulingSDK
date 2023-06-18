@@ -84,16 +84,16 @@ func TestStops(t *testing.T) {
 		name        string
 		html        string
 		wantResults []Direction
-		stopsCount  int
+		stopsCount  []int
 	}{
 		{
 			name:        "Invalid html",
 			html:        "",
 			wantResults: nil,
-			stopsCount:  20,
+			stopsCount:  nil,
 		},
 		{
-			name: "Invalid html",
+			name: "Correct html",
 			html: GetTestHtml("testData/Route80.html"),
 			wantResults: []Direction{
 				{
@@ -103,7 +103,7 @@ func TestStops(t *testing.T) {
 					Name: "ул. Милиционера Власова – Детский дом культуры им.Кирова",
 				},
 			},
-			stopsCount: 0,
+			stopsCount: []int{26, 20},
 		},
 	}
 
@@ -115,12 +115,21 @@ func TestStops(t *testing.T) {
 			}
 
 			if len(res) != len(ts.wantResults) {
+				fmt.Println("Got:")
+				for _, r := range res {
+					fmt.Printf("Name: %s Stops: %#v\n", r.Name, nil)
+				}
+				fmt.Printf("want %#v", ts.wantResults)
 				t.Fatalf("Diff length: want %d, got %d", len(ts.wantResults), len(res))
 			}
 
 			for i := range ts.wantResults {
+				printStops(res[i].Stops)
 				if ts.wantResults[i].Name != res[i].Name {
 					t.Fatalf("Diff names: want %s, got %s", ts.wantResults[i].Name, res[i].Name)
+				}
+				if ts.stopsCount[i] != len(res[i].Stops) {
+					t.Fatalf("[%d] Diff stops length: want %d, got %d", i, ts.stopsCount[i], len(res[i].Stops))
 				}
 			}
 
@@ -128,4 +137,12 @@ func TestStops(t *testing.T) {
 
 	}
 
+}
+
+func printStops(stops []Stop) {
+	fmt.Println("Stops:")
+	for i, s := range stops {
+		fmt.Printf("\t%d - %#v - %#v\n", i+1, s.Name, s.schedulingUrl)
+	}
+	fmt.Println("end")
 }
