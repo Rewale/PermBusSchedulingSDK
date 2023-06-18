@@ -201,9 +201,6 @@ func printStops(stops []Stop) {
 	fmt.Println("Stops:")
 	for i, s := range stops {
 		fmt.Printf("\t%d - %s - %s\n", i+1, s.Name, s.schedulingUrl)
-		for _, ti := range s.Scheduling {
-			fmt.Printf("\t\t%d:%d", ti.Minute(), ti.Second())
-		}
 	}
 	fmt.Println("end")
 }

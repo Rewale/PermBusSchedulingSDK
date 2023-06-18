@@ -18,14 +18,13 @@ const (
 )
 
 type (
+	Scheduling   []time.Time
 	SearchResult struct {
 		routeHref string
 		RouteName string
 	}
 	Stop struct {
 		Name          string
-		RouteName     string
-		Scheduling    []time.Time
 		schedulingUrl string
 	}
 	Direction struct {
@@ -151,17 +150,13 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 	}
 }
 
-func (p *Parser) parseStopScheduling(s Stop) {
+func (p *Parser) StopScheduling(s Stop) (Scheduling, error) {
 	schedulingHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, s.schedulingUrl))
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	sched, err := p.parseStopSchedulingHtml(schedulingHtml)
-	if err != nil {
-		return
-	}
-	s.Scheduling = sched
+	return p.parseStopSchedulingHtml(schedulingHtml)
 }
 
 func (p *Parser) parseStopSchedulingHtml(text string) ([]time.Time, error) {
