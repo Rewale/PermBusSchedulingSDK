@@ -17,7 +17,7 @@ func GetTestHtml(path string) string {
 
 	return string(bs)
 }
-func TestParseResult(t *testing.T) {
+func TestParseSearchResult(t *testing.T) {
 	parser := NewParser(nil)
 	testTable := []struct {
 		name        string
@@ -65,7 +65,6 @@ func TestParseResult(t *testing.T) {
 			}
 
 			for i := range testCase.wantResults {
-				fmt.Println(i)
 				if res[i].routeHref != testCase.wantResults[i].routeHref || res[i].RouteName != testCase.wantResults[i].RouteName {
 					t.Errorf("Diff results: got %s, want %s", res[i], testCase.wantResults[i])
 				}
@@ -74,4 +73,59 @@ func TestParseResult(t *testing.T) {
 		})
 
 	}
+}
+
+func TestStops(t *testing.T) {
+	parser := NewParser(nil)
+	res, _ := parser.parseStops(GetTestHtml("testData/Route80.html"))
+
+	fmt.Printf("%#v", res)
+	testTable := []struct {
+		name        string
+		html        string
+		wantResults []Direction
+		stopsCount  int
+	}{
+		{
+			name:        "Invalid html",
+			html:        "",
+			wantResults: nil,
+			stopsCount:  20,
+		},
+		{
+			name: "Invalid html",
+			html: GetTestHtml("testData/Route80.html"),
+			wantResults: []Direction{
+				{
+					Name: "Детский дом культуры им.Кирова – ул. Милиционера Власова",
+				},
+				{
+					Name: "ул. Милиционера Власова – Детский дом культуры им.Кирова",
+				},
+			},
+			stopsCount: 0,
+		},
+	}
+
+	for _, ts := range testTable {
+		t.Run(ts.name, func(t *testing.T) {
+			res, err := parser.parseStops(ts.html)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(res) != len(ts.wantResults) {
+				t.Fatalf("Diff length: want %d, got %d", len(ts.wantResults), len(res))
+			}
+
+			for i := range ts.wantResults {
+				if ts.wantResults[i].Name != res[i].Name {
+					t.Fatalf("Diff names: want %s, got %s", ts.wantResults[i].Name, res[i].Name)
+				}
+			}
+
+		})
+
+	}
+
 }
