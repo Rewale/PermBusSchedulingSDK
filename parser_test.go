@@ -2,15 +2,15 @@ package permbusscheduling
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"testing"
 	"time"
 )
 
 func getTestHtml(path string) string {
 
-	bs, err := ioutil.ReadFile(path)
+	bs, err := os.ReadFile(path)
 
 	if err != nil {
 		log.Fatalln(err)
