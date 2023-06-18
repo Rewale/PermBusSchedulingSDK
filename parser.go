@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -140,7 +141,6 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 					stop.Name = name
 					// TODO: parse stop scheduling
 					direction.Stops = append(direction.Stops, stop)
-
 				}
 			}
 
@@ -148,8 +148,75 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 	}
 }
 
-func (p *Parser) parseStopScheduling(s Stop) {
+func (p *Parser) parseStopScheduling(s *Stop) {
+	schedulingHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, s.schedulingUrl))
+	if err != nil {
+		return
+	}
 
+	sched, err := p.parseStopSchedulingHtml(schedulingHtml)
+	if err != nil {
+		return
+	}
+	s.Scheduling = sched
+}
+
+func (p *Parser) parseStopSchedulingHtml(text string) ([]time.Time, error) {
+	var result []time.Time
+	isHour := false
+	isMinute := false
+	var hour int
+
+	tkn := html.NewTokenizer(strings.NewReader(text))
+
+	for {
+		tt := tkn.Next()
+		switch tt {
+		case html.ErrorToken:
+			return result, nil
+		case html.StartTagToken:
+			t := tkn.Token()
+			if t.Data == "div" {
+				for _, attr := range t.Attr {
+					if attr.Key == "class" && attr.Val == "hour" {
+						isHour = true
+					}
+					if attr.Key == "class" && attr.Val == "minute trip-with-note" && isHour {
+						isMinute = true
+					}
+				}
+			}
+			if t.Data == "li" {
+				isMinute = false
+				isHour = false
+			}
+		case html.TextToken:
+			t := tkn.Token()
+			if isHour && !isMinute {
+				data := strings.TrimSpace(t.Data)
+				if data == "" {
+					continue
+				}
+				hourTmp, err := strconv.Atoi(data)
+				if err != nil {
+					return nil, fmt.Errorf("cant parse hour: %#v", t.Data)
+				}
+				hour = hourTmp
+			}
+
+			if isMinute {
+				data := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(t.Data, "*", ""), "\n", ""))
+				minute, err := strconv.Atoi(data)
+				if err != nil {
+					continue
+				}
+				newTime := time.Date(time.Now().Year(),
+					time.Now().Month(), time.Now().Day(),
+					hour, minute, 0, 0, time.Now().Location())
+				result = append(result, newTime)
+			}
+		}
+	}
 }
 
 // Ищет на сайте расписания определенный номер маршрута и выдает список результатов

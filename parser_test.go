@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"testing"
+	"time"
 )
 
 func GetTestHtml(path string) string {
@@ -139,10 +140,72 @@ func TestStops(t *testing.T) {
 
 }
 
+func TestParseScheduling(t *testing.T) {
+	parser := NewParser(nil)
+	testTable := []struct {
+		name           string
+		wantScheduling []time.Time
+		html           string
+	}{
+		{
+			html: GetTestHtml("testData/Stop80_1701.html"),
+			wantScheduling: []time.Time{
+				newTime(5, 50),
+				newTime(6, 16),
+				newTime(6, 38),
+				newTime(7, 01),
+				newTime(7, 23),
+				newTime(7, 45),
+
+				newTime(8, 07),
+				newTime(8, 29),
+				newTime(8, 51),
+
+				newTime(9, 14),
+				newTime(9, 37),
+			},
+			name: "Correct stops html",
+		},
+		{
+			html:           "",
+			wantScheduling: []time.Time{},
+			name:           "Incorrect stops html",
+		},
+	}
+
+	for _, ts := range testTable {
+		t.Run(ts.name, func(t *testing.T) {
+			res, err := parser.parseStopSchedulingHtml(ts.html)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(res) != len(ts.wantScheduling) {
+				t.Fatalf("Wrong length. Want %d got %d", len(res), len(ts.wantScheduling))
+			}
+
+			for i := range res {
+				if res[i].Hour() != ts.wantScheduling[i].Hour() {
+					t.Fatalf("Wrong hour. got %d, want %d", res[i].Hour(), ts.wantScheduling[i].Hour())
+				}
+				if res[i].Minute() != ts.wantScheduling[i].Minute() {
+					t.Fatalf("Wrong minutes. got %d, want %d", res[i].Minute(), ts.wantScheduling[i].Minute())
+				}
+			}
+
+		})
+	}
+}
+
 func printStops(stops []Stop) {
 	fmt.Println("Stops:")
 	for i, s := range stops {
-		fmt.Printf("\t%d - %#v - %#v\n", i+1, s.Name, s.schedulingUrl)
+		fmt.Printf("\t%d - %s - %s - %#v\n", i+1, s.Name, s.schedulingUrl, s.Scheduling)
 	}
 	fmt.Println("end")
+}
+func newTime(hour, minute int) time.Time {
+	return time.Date(time.Now().Year(),
+		time.Now().Month(), time.Now().Day(),
+		hour, minute, 0, 0, time.Now().Location())
 }
