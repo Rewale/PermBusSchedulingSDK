@@ -1,4 +1,4 @@
-module github.com/Rewale/PermBusScheduling
+module github.com/Rewale/PermBusSchedulingSDK
 
 go 1.19
 

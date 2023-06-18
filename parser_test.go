@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func GetTestHtml(path string) string {
+func getTestHtml(path string) string {
 
 	bs, err := ioutil.ReadFile(path)
 
@@ -34,13 +34,13 @@ func TestParseSearchResult(t *testing.T) {
 		},
 		{
 			name:        "Single search result",
-			html:        GetTestHtml("testData/SingleSearchResult.html"),
+			html:        getTestHtml("testData/SingleSearchResult.html"),
 			wantError:   false,
 			wantResults: []SearchResult{{routeHref: "/route/80/", RouteName: "Автобус «80, ДДК им. Кирова - ул. Милиционера Власова»"}},
 		},
 		{
 			name:      "Three search results",
-			html:      GetTestHtml("testData/ThreeSearchResult.html"),
+			html:      getTestHtml("testData/ThreeSearchResult.html"),
 			wantError: false,
 			wantResults: []SearchResult{
 				{routeHref: "/route/80/", RouteName: "Автобус «80, ДДК им. Кирова - ул. Милиционера Власова»"},
@@ -78,7 +78,7 @@ func TestParseSearchResult(t *testing.T) {
 
 func TestStops(t *testing.T) {
 	parser := NewParser(nil)
-	res, _ := parser.parseStops(GetTestHtml("testData/Route80.html"))
+	res, _ := parser.parseStops(getTestHtml("testData/Route80.html"))
 
 	fmt.Printf("%#v", res)
 	testTable := []struct {
@@ -95,7 +95,7 @@ func TestStops(t *testing.T) {
 		},
 		{
 			name: "Correct html",
-			html: GetTestHtml("testData/Route80.html"),
+			html: getTestHtml("testData/Route80.html"),
 			wantResults: []Direction{
 				{
 					Name: "Детский дом культуры им.Кирова – ул. Милиционера Власова",
@@ -148,7 +148,7 @@ func TestParseScheduling(t *testing.T) {
 		html           string
 	}{
 		{
-			html: GetTestHtml("testData/Stop80_1701.html"),
+			html: getTestHtml("testData/Stop80_1701.html"),
 			wantScheduling: []time.Time{
 				newTime(5, 50),
 				newTime(6, 16),
