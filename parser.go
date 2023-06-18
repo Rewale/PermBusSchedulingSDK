@@ -150,6 +150,7 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 	}
 }
 
+// Расписание прибытия транспорта на остановку
 func (p *Parser) StopScheduling(s Stop) (Scheduling, error) {
 	schedulingHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, s.schedulingUrl))
 	if err != nil {
