@@ -1,4 +1,4 @@
-name: LintTestBuild
+name: LintAndTest
 
 on:
   workflow_dispatch:
