@@ -6,6 +6,10 @@ on:
     paths-ignore:
       - '.github/workflows/*'
     branches: [master]
+  push:
+    paths-ignore:
+      - '.github/workflows/*'
+    branches: [master]
 
 jobs:
   lint:
