@@ -150,7 +150,7 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 	}
 }
 
-// Расписание прибытия транспорта на остановку
+// StopScheduling расписание прибытия транспорта на остановку
 func (p *Parser) StopScheduling(s Stop) (Scheduling, error) {
 	schedulingHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, s.schedulingUrl))
 	if err != nil {
@@ -218,7 +218,7 @@ func (p *Parser) parseStopSchedulingHtml(text string) ([]time.Time, error) {
 	}
 }
 
-// Ищет на сайте расписания определенный номер маршрута и выдает список результатов
+// Search ищет на сайте расписания определенный номер маршрута и выдает список результатов
 func (p *Parser) Search(query int) ([]*SearchResult, error) {
 	searchHtml, err := p.getHtmlPage(fmt.Sprintf(searchUrl, query))
 	if err != nil {
@@ -228,7 +228,7 @@ func (p *Parser) Search(query int) ([]*SearchResult, error) {
 	return p.parserResult(searchHtml)
 }
 
-// Выдает информацию о маршруте: его направления и остановки
+// Stops выдает информацию о маршруте: его направления и остановки
 func (p *Parser) Stops(search *SearchResult) ([]*Direction, error) {
 	stopsHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, search.routeHref))
 	if err != nil {
