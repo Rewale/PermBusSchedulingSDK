@@ -15,7 +15,7 @@ import (
 type RouteType int
 
 const (
-	Bus RouteType = iota
+	Bus RouteType = iota + 1
 	TrolleyBus
 	Tram
 	Taxi
@@ -69,7 +69,7 @@ func (p *Parser) getHtmlPage(webPage string) (string, error) {
 	return string(body), nil
 }
 
-func (p *Parser) parserResult(text string) ([]*Route, error) {
+func (p *Parser) parserResult(text string, routeType *RouteType) ([]*Route, error) {
 	var search *Route
 	var isRouteName bool
 	result := make([]*Route, 0)
@@ -84,29 +84,36 @@ func (p *Parser) parserResult(text string) ([]*Route, error) {
 			t := tkn.Token()
 			if t.Data == "a" {
 				for _, attr := range t.Attr {
-					if attr.Key == "href" {
+					if attr.Key == "href" && strings.HasPrefix(attr.Val, "/route") {
 						search = new(Route)
 						search.routeHref = attr.Val
+						if routeType != nil {
+							isRouteName = true
+						}
 					}
 				}
-			} else {
+			} else if routeType == nil {
 				isRouteName = t.Data == "h4"
 			}
 
 		case html.TextToken:
 			if isRouteName && search != nil {
 				search.RouteName = tkn.Token().Data
-				if strings.HasPrefix(search.RouteName, bus) {
-					search.Type = Bus
-					search.RouteName = strings.Replace(search.RouteName, bus, "", 1)
-				} else if strings.HasPrefix(search.RouteName, tram) {
-					search.Type = Tram
-					search.RouteName = strings.Replace(search.RouteName, tram, "", 1)
-				} else if strings.HasPrefix(search.RouteName, taxi) {
-					search.Type = Taxi
-					search.RouteName = strings.Replace(search.RouteName, taxi, "", 1)
+				if routeType == nil {
+					if strings.HasPrefix(search.RouteName, bus) {
+						search.Type = Bus
+						search.RouteName = strings.Replace(search.RouteName, bus, "", 1)
+					} else if strings.HasPrefix(search.RouteName, tram) {
+						search.Type = Tram
+						search.RouteName = strings.Replace(search.RouteName, tram, "", 1)
+					} else if strings.HasPrefix(search.RouteName, taxi) {
+						search.Type = Taxi
+						search.RouteName = strings.Replace(search.RouteName, taxi, "", 1)
+					} else {
+						continue
+					}
 				} else {
-					continue
+					search.Type = *routeType
 				}
 				search.RouteName = strings.TrimSpace(search.RouteName)
 				search.RouteName = p.removeQuotes(search.RouteName)
@@ -256,7 +263,7 @@ func (p *Parser) Search(query int) ([]*Route, error) {
 		return nil, err
 	}
 
-	return p.parserResult(searchHtml)
+	return p.parserResult(searchHtml, nil)
 }
 
 // Stops выдает информацию о маршруте: его направления и остановки
@@ -270,5 +277,11 @@ func (p *Parser) Stops(search *Route) ([]*Direction, error) {
 }
 
 func (p *Parser) AllRoutes(t RouteType) ([]*Route, error) {
-	return nil, nil
+	const url = "https://www.m.gortransperm.ru/routes-list/%d/"
+	text, err := p.getHtmlPage(fmt.Sprintf(url, int(t)))
+	if err != nil {
+		return nil, err
+	}
+
+	return p.parserResult(text, &t)
 }

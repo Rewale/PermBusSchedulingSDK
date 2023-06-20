@@ -33,10 +33,11 @@ func TestParseSearchResult(t *testing.T) {
 			wantResults: nil,
 		},
 		{
-			name:        "Single search result",
-			html:        getTestHtml("testData/SingleSearchResult.html"),
-			wantError:   false,
-			wantResults: []Route{{routeHref: "/route/80/", RouteName: "80, ДДК им. Кирова - ул. Милиционера Власова"}},
+			name:      "Single search result",
+			html:      getTestHtml("testData/SingleSearchResult.html"),
+			wantError: false,
+			wantResults: []Route{{routeHref: "/route/80/",
+				RouteName: "80, ДДК им. Кирова - ул. Милиционера Власова", Type: Bus}},
 		},
 		{
 			name:      "Three search results",
@@ -51,7 +52,7 @@ func TestParseSearchResult(t *testing.T) {
 	}
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-			res, err := parser.parserResult(testCase.html)
+			res, err := parser.parserResult(testCase.html, nil)
 
 			if err == nil && testCase.wantError {
 				t.Error("need error, but err == nil")
@@ -75,6 +76,33 @@ func TestParseSearchResult(t *testing.T) {
 
 		})
 
+	}
+}
+
+func TestAllRoutes(t *testing.T) {
+	parser := NewParser(nil)
+	wantType := Bus
+	wantCount := 71
+	text := getTestHtml("testData/AllBusRoutes.html")
+
+	res, err := parser.parserResult(text, &wantType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res) != wantCount {
+		t.Fatalf("Wrong length. got %d want %d", len(res), wantCount)
+		return
+	}
+	for _, r := range res {
+		if r.Type != wantType {
+			t.Fatalf("Wrong type. want %d got %d", wantType, r.Type)
+		}
+		if r.RouteName == "" {
+			t.Fatal("Empty route name")
+		}
+		if r.routeHref == "" {
+			t.Fatal("Empty url")
+		}
 	}
 }
 
