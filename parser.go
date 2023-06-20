@@ -12,16 +12,29 @@ import (
 	"golang.org/x/net/html"
 )
 
+type RouteType int
+
+const (
+	Bus RouteType = iota
+	TrolleyBus
+	Tram
+	Taxi
+)
+
 const (
 	searchUrl = "https://www.m.gortransperm.ru/search/?q=%d"
 	baseUrl   = "https://www.m.gortransperm.ru%s"
+	bus       = "Автобус"
+	tram      = "Трамвай"
+	taxi      = "Маршрутное такси"
 )
 
 type (
-	Scheduling   []time.Time
-	SearchResult struct {
+	Scheduling []time.Time
+	Route      struct {
 		routeHref string
 		RouteName string
+		Type      RouteType
 	}
 	Stop struct {
 		Name          string
@@ -56,10 +69,10 @@ func (p *Parser) getHtmlPage(webPage string) (string, error) {
 	return string(body), nil
 }
 
-func (p *Parser) parserResult(text string) ([]*SearchResult, error) {
-	var search *SearchResult
+func (p *Parser) parserResult(text string) ([]*Route, error) {
+	var search *Route
 	var isRouteName bool
-	result := make([]*SearchResult, 0)
+	result := make([]*Route, 0)
 	tkn := html.NewTokenizer(strings.NewReader(text))
 
 	for {
@@ -72,7 +85,7 @@ func (p *Parser) parserResult(text string) ([]*SearchResult, error) {
 			if t.Data == "a" {
 				for _, attr := range t.Attr {
 					if attr.Key == "href" {
-						search = new(SearchResult)
+						search = new(Route)
 						search.routeHref = attr.Val
 					}
 				}
@@ -83,6 +96,20 @@ func (p *Parser) parserResult(text string) ([]*SearchResult, error) {
 		case html.TextToken:
 			if isRouteName && search != nil {
 				search.RouteName = tkn.Token().Data
+				if strings.HasPrefix(search.RouteName, bus) {
+					search.Type = Bus
+					search.RouteName = strings.Replace(search.RouteName, bus, "", 1)
+				} else if strings.HasPrefix(search.RouteName, tram) {
+					search.Type = Tram
+					search.RouteName = strings.Replace(search.RouteName, tram, "", 1)
+				} else if strings.HasPrefix(search.RouteName, taxi) {
+					search.Type = Taxi
+					search.RouteName = strings.Replace(search.RouteName, taxi, "", 1)
+				} else {
+					continue
+				}
+				search.RouteName = strings.TrimSpace(search.RouteName)
+				search.RouteName = p.removeQuotes(search.RouteName)
 				result = append(result, search)
 				search = nil
 				isRouteName = false
@@ -90,6 +117,13 @@ func (p *Parser) parserResult(text string) ([]*SearchResult, error) {
 		}
 	}
 }
+
+func (p *Parser) removeQuotes(s string) string {
+	res := strings.ReplaceAll(s, "«", "")
+	res = strings.ReplaceAll(res, "»", "")
+	return res
+}
+
 func (p *Parser) parseStops(text string) ([]*Direction, error) {
 	var wg sync.WaitGroup
 
@@ -124,9 +158,6 @@ func (p *Parser) parseStops(text string) ([]*Direction, error) {
 							schedulingUrl: href,
 						}
 					}
-					//<a href="/time-table/80/1701">
-					//Детский дом культуры им.Кирова
-					//</a>
 				}
 			}
 		case html.TextToken:
@@ -219,7 +250,7 @@ func (p *Parser) parseStopSchedulingHtml(text string) ([]time.Time, error) {
 }
 
 // Search ищет на сайте расписания определенный номер маршрута и выдает список результатов
-func (p *Parser) Search(query int) ([]*SearchResult, error) {
+func (p *Parser) Search(query int) ([]*Route, error) {
 	searchHtml, err := p.getHtmlPage(fmt.Sprintf(searchUrl, query))
 	if err != nil {
 		return nil, err
@@ -229,11 +260,15 @@ func (p *Parser) Search(query int) ([]*SearchResult, error) {
 }
 
 // Stops выдает информацию о маршруте: его направления и остановки
-func (p *Parser) Stops(search *SearchResult) ([]*Direction, error) {
+func (p *Parser) Stops(search *Route) ([]*Direction, error) {
 	stopsHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, search.routeHref))
 	if err != nil {
 		return nil, err
 	}
 
 	return p.parseStops(stopsHtml)
+}
+
+func (p *Parser) AllRoutes(t RouteType) ([]*Route, error) {
+	return nil, nil
 }

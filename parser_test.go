@@ -23,7 +23,7 @@ func TestParseSearchResult(t *testing.T) {
 	testTable := []struct {
 		name        string
 		html        string
-		wantResults []SearchResult
+		wantResults []Route
 		wantError   bool
 	}{
 		{
@@ -36,16 +36,16 @@ func TestParseSearchResult(t *testing.T) {
 			name:        "Single search result",
 			html:        getTestHtml("testData/SingleSearchResult.html"),
 			wantError:   false,
-			wantResults: []SearchResult{{routeHref: "/route/80/", RouteName: "Автобус «80, ДДК им. Кирова - ул. Милиционера Власова»"}},
+			wantResults: []Route{{routeHref: "/route/80/", RouteName: "80, ДДК им. Кирова - ул. Милиционера Власова"}},
 		},
 		{
 			name:      "Three search results",
 			html:      getTestHtml("testData/ThreeSearchResult.html"),
 			wantError: false,
-			wantResults: []SearchResult{
-				{routeHref: "/route/80/", RouteName: "Автобус «80, ДДК им. Кирова - ул. Милиционера Власова»"},
-				{routeHref: "/route/79/", RouteName: "Автобус «79, Test test»"},
-				{routeHref: "/route/7988/", RouteName: "Трамвай «12, Тест тест теееест»"},
+			wantResults: []Route{
+				{routeHref: "/route/80/", RouteName: "80, ДДК им. Кирова - ул. Милиционера Власова", Type: Bus},
+				{routeHref: "/route/79/", RouteName: "79, Test test", Type: Bus},
+				{routeHref: "/route/7988/", RouteName: "12, Тест тест теееест", Type: Tram},
 			},
 		},
 	}
@@ -66,8 +66,10 @@ func TestParseSearchResult(t *testing.T) {
 			}
 
 			for i := range testCase.wantResults {
-				if res[i].routeHref != testCase.wantResults[i].routeHref || res[i].RouteName != testCase.wantResults[i].RouteName {
-					t.Errorf("Diff results: got %s, want %s", res[i], testCase.wantResults[i])
+				if res[i].routeHref != testCase.wantResults[i].routeHref ||
+					res[i].RouteName != testCase.wantResults[i].RouteName ||
+					res[i].Type != testCase.wantResults[i].Type {
+					t.Errorf("Diff routes: got %v, want %v", res[i], testCase.wantResults[i])
 				}
 			}
 
