@@ -35,6 +35,8 @@ type (
 		routeHref string
 		RouteName string
 		Type      RouteType
+		Number    int
+		Literal   *string
 	}
 	Stop struct {
 		Name          string
