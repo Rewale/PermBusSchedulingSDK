@@ -2,8 +2,11 @@ package permbusscheduling
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -18,41 +21,94 @@ func getTestHtml(path string) string {
 
 	return string(bs)
 }
+
+type roundTripFunc func(r *http.Request) (*http.Response, error)
+
+func (s roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return s(r)
+}
+
+func newTestParser(statusCode int, body string) *Parser {
+	testClient := &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+
+			return &http.Response{
+				StatusCode: statusCode,
+				Body:       io.NopCloser(strings.NewReader(body)),
+			}, nil
+		}),
+	}
+
+	return NewParser(testClient)
+}
+
 func TestParseSearchResult(t *testing.T) {
-	parser := NewParser(nil)
 	testTable := []struct {
 		name        string
 		html        string
 		wantResults []Route
 		wantError   bool
+		Search      int
+		Literal     string
 	}{
 		{
-			name:        "Invalid html",
-			html:        "",
-			wantError:   false,
-			wantResults: nil,
-		},
-		{
+			Search:    80,
+			Literal:   "",
 			name:      "Single search result",
 			html:      getTestHtml("testData/SingleSearchResult.html"),
 			wantError: false,
-			wantResults: []Route{{routeHref: "/route/80/",
-				RouteName: "80, ДДК им. Кирова - ул. Милиционера Власова", Type: Bus}},
+			wantResults: []Route{{routeHref: "/route/80/", Number: 80, Literal: "",
+				RouteName: "ДДК им. Кирова - ул. Милиционера Власова", Type: Bus}},
 		},
 		{
-			name:      "Three search results",
-			html:      getTestHtml("testData/ThreeSearchResult.html"),
+			Search:    7,
+			Literal:   "Т",
+			name:      "Number with literal",
+			html:      getTestHtml("testData/7T.html"),
+			wantError: false,
+			wantResults: []Route{{routeHref: "/route/207/", Number: 7,
+				Literal:   "Т",
+				RouteName: "Н.Крым - Центральный рынок", Type: Taxi}},
+		},
+		{
+			Search:    7,
+			Literal:   "т",
+			name:      "Number with low literal",
+			html:      getTestHtml("testData/7T.html"),
+			wantError: false,
+			wantResults: []Route{{routeHref: "/route/207/", Number: 7,
+				Literal:   "Т",
+				RouteName: "Н.Крым - Центральный рынок", Type: Taxi}},
+		},
+		{
+			Search:    12,
+			Literal:   "",
+			name:      "Multiple result",
+			html:      getTestHtml("testData/12.html"),
 			wantError: false,
 			wantResults: []Route{
-				{routeHref: "/route/80/", RouteName: "80, ДДК им. Кирова - ул. Милиционера Власова", Type: Bus},
-				{routeHref: "/route/79/", RouteName: "79, Test test", Type: Bus},
-				{routeHref: "/route/7988/", RouteName: "12, Тест тест теееест", Type: Tram},
+				{
+					routeHref: "/route/812/", Number: 12,
+					Literal:   "",
+					RouteName: "Школа № 107 - Разгуляй", Type: Tram,
+				},
+				{
+					routeHref: "/route/12/", Number: 12,
+					Literal:   "",
+					RouteName: "Дворец культуры им. Гагарина - ОАО \"ПЗСП\"", Type: Bus,
+				},
 			},
 		},
 	}
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-			res, err := parser.parserResult(testCase.html, nil)
+			var res []*Route
+			var err error
+			if testing.Short() {
+				res, err = newTestParser(200, testCase.html).Search(testCase.Search, testCase.Literal)
+			} else {
+				res, err = NewParser(&http.Client{}).Search(testCase.Search, testCase.Literal)
+			}
 
 			if err == nil && testCase.wantError {
 				t.Error("need error, but err == nil")
@@ -69,7 +125,8 @@ func TestParseSearchResult(t *testing.T) {
 			for i := range testCase.wantResults {
 				if res[i].routeHref != testCase.wantResults[i].routeHref ||
 					res[i].RouteName != testCase.wantResults[i].RouteName ||
-					res[i].Type != testCase.wantResults[i].Type {
+					res[i].Type != testCase.wantResults[i].Type ||
+					res[i].Number != testCase.wantResults[i].Number {
 					t.Errorf("Diff routes: got %v, want %v", res[i], testCase.wantResults[i])
 				}
 			}
@@ -107,7 +164,12 @@ func TestAllRoutes(t *testing.T) {
 }
 
 func TestStops(t *testing.T) {
-	parser := NewParser(nil)
+	var parser *Parser
+	if testing.Short() {
+		parser = NewParser(nil)
+	} else {
+		parser = NewParser(&http.Client{})
+	}
 	res, _ := parser.parseStops(getTestHtml("testData/Route80.html"))
 
 	fmt.Printf("%#v", res)
@@ -116,14 +178,11 @@ func TestStops(t *testing.T) {
 		html        string
 		wantResults []Direction
 		stopsCount  []int
+		route       *Route
 	}{
 		{
-			name:        "Invalid html",
-			html:        "",
-			wantResults: nil,
-			stopsCount:  nil,
-		},
-		{
+			route: &Route{routeHref: "/route/80/", Number: 80,
+				RouteName: "80, ДДК им. Кирова - ул. Милиционера Власова", Type: Bus},
 			name: "Correct html",
 			html: getTestHtml("testData/Route80.html"),
 			wantResults: []Direction{
@@ -140,7 +199,14 @@ func TestStops(t *testing.T) {
 
 	for _, ts := range testTable {
 		t.Run(ts.name, func(t *testing.T) {
-			res, err := parser.parseStops(ts.html)
+			var res []*Direction
+			var err error
+			if testing.Short() {
+				res, err = parser.parseStops(ts.html)
+			} else {
+				res, err = parser.Stops(ts.route)
+			}
+
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -228,12 +294,16 @@ func TestParseScheduling(t *testing.T) {
 }
 
 func printStops(stops []Stop) {
+	if testing.Short() {
+		return
+	}
 	fmt.Println("Stops:")
 	for i, s := range stops {
 		fmt.Printf("\t%d - %s - %s\n", i+1, s.Name, s.schedulingUrl)
 	}
 	fmt.Println("end")
 }
+
 func newTime(hour, minute int) time.Time {
 	return time.Date(time.Now().Year(),
 		time.Now().Month(), time.Now().Day(),
