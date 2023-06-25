@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,7 +24,7 @@ const (
 )
 
 const (
-	searchUrl = "https://www.m.gortransperm.ru/search/?q=%d"
+	searchUrl = "https://www.m.gortransperm.ru/search/?q=%d%s"
 	baseUrl   = "https://www.m.gortransperm.ru%s"
 	bus       = "Автобус"
 	tram      = "Трамвай"
@@ -37,7 +38,7 @@ type (
 		RouteName string
 		Type      RouteType
 		Number    int
-		Literal   *string
+		Literal   string
 	}
 	Stop struct {
 		Name          string
@@ -49,20 +50,28 @@ type (
 	}
 
 	Parser struct {
-		client   *http.Client
-		reNumber *regexp.Regexp
+		client          *http.Client
+		reNumber        *regexp.Regexp
+		reNumberLiteral *regexp.Regexp
 	}
 )
 
 func NewParser(client *http.Client) *Parser {
 	return &Parser{
-		client:   client,
-		reNumber: regexp.MustCompile("[0-9]+"),
+		client:          client,
+		reNumber:        regexp.MustCompile("[0-9]+"),
+		reNumberLiteral: regexp.MustCompile("[0-9]+[а-яА-Я]"),
 	}
 }
 
 func (p *Parser) getHtmlPage(webPage string) (string, error) {
-	resp, err := p.client.Get(webPage)
+	req, err := http.NewRequest("GET", webPage, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Accept-Charset", "utf-8")
+
+	resp, err := p.client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -132,9 +141,16 @@ func (p *Parser) parserResult(text string, routeType *RouteType) ([]*Route, erro
 }
 
 func (p *Parser) extractNumberFromRouteName(r *Route) {
-	n := p.reNumber.FindString(r.RouteName)
+	n := p.reNumberLiteral.FindString(r.RouteName)
+	if n != "" {
+		runeN := []rune(n)
+		r.Number, _ = strconv.Atoi(string(runeN[:len(runeN)-1]))
+		r.Literal = strings.ToUpper(string(runeN[len(runeN)-1]))
+	} else {
+		n = p.reNumber.FindString(r.RouteName)
+		r.Number, _ = strconv.Atoi(n)
+	}
 	r.RouteName = strings.ReplaceAll(r.RouteName, fmt.Sprintf("%s, ", n), "")
-	r.Number, _ = strconv.Atoi(n)
 }
 
 func (p *Parser) removeQuotes(s string) string {
@@ -268,9 +284,9 @@ func (p *Parser) parseStopSchedulingHtml(text string) ([]time.Time, error) {
 	}
 }
 
-// Search ищет на сайте расписания определенный номер маршрута и выдает список результатов
-func (p *Parser) Search(query int) ([]*Route, error) {
-	searchHtml, err := p.getHtmlPage(fmt.Sprintf(searchUrl, query))
+// Search ищет на сайте расписания определенный номер маршрута c литералом и выдает список результатов
+func (p *Parser) Search(number int, literal string) ([]*Route, error) {
+	searchHtml, err := p.getHtmlPage(fmt.Sprintf(searchUrl, number, url.QueryEscape(literal)))
 	if err != nil {
 		return nil, err
 	}

@@ -2,9 +2,11 @@ package permbusscheduling
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -19,27 +21,54 @@ func getTestHtml(path string) string {
 
 	return string(bs)
 }
-func TestParseSearchResult(t *testing.T) {
-	var parser *Parser
-	if testing.Short() {
-		parser = NewParser(nil)
-	} else {
-		parser = NewParser(&http.Client{})
+
+type roundTripFunc func(r *http.Request) (*http.Response, error)
+
+func (s roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return s(r)
+}
+
+func newTestParser(statusCode int, body string) *Parser {
+	testClient := &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+
+			return &http.Response{
+				StatusCode: statusCode,
+				Body:       ioutil.NopCloser(strings.NewReader(body)),
+			}, nil
+		}),
 	}
+
+	return NewParser(testClient)
+}
+
+func TestParseSearchResult(t *testing.T) {
 	testTable := []struct {
 		name        string
 		html        string
 		wantResults []Route
 		wantError   bool
 		Search      int
+		Literal     string
 	}{
 		{
 			Search:    80,
+			Literal:   "",
 			name:      "Single search result",
 			html:      getTestHtml("testData/SingleSearchResult.html"),
 			wantError: false,
-			wantResults: []Route{{routeHref: "/route/80/", Number: 80,
+			wantResults: []Route{{routeHref: "/route/80/", Number: 80, Literal: "",
 				RouteName: "ДДК им. Кирова - ул. Милиционера Власова", Type: Bus}},
+		},
+		{
+			Search:    7,
+			Literal:   "т",
+			name:      "Number with literal",
+			html:      getTestHtml("testData/7T.html"),
+			wantError: false,
+			wantResults: []Route{{routeHref: "/route/207/", Number: 7,
+				Literal:   "Т",
+				RouteName: "Н.Крым - Центральный рынок", Type: Taxi}},
 		},
 	}
 	for _, testCase := range testTable {
@@ -47,9 +76,9 @@ func TestParseSearchResult(t *testing.T) {
 			var res []*Route
 			var err error
 			if testing.Short() {
-				res, err = parser.parserResult(testCase.html, nil)
+				res, err = newTestParser(200, testCase.html).Search(testCase.Search, testCase.Literal)
 			} else {
-				res, err = parser.Search(80)
+				res, err = NewParser(&http.Client{}).Search(testCase.Search, testCase.Literal)
 			}
 
 			if err == nil && testCase.wantError {
