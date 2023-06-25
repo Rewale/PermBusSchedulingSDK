@@ -39,7 +39,7 @@ func TestParseSearchResult(t *testing.T) {
 			html:      getTestHtml("testData/SingleSearchResult.html"),
 			wantError: false,
 			wantResults: []Route{{routeHref: "/route/80/", Number: 80,
-				RouteName: "80, ДДК им. Кирова - ул. Милиционера Власова", Type: Bus}},
+				RouteName: "ДДК им. Кирова - ул. Милиционера Власова", Type: Bus}},
 		},
 	}
 	for _, testCase := range testTable {
@@ -67,7 +67,8 @@ func TestParseSearchResult(t *testing.T) {
 			for i := range testCase.wantResults {
 				if res[i].routeHref != testCase.wantResults[i].routeHref ||
 					res[i].RouteName != testCase.wantResults[i].RouteName ||
-					res[i].Type != testCase.wantResults[i].Type {
+					res[i].Type != testCase.wantResults[i].Type ||
+					res[i].Number != testCase.wantResults[i].Number {
 					t.Errorf("Diff routes: got %v, want %v", res[i], testCase.wantResults[i])
 				}
 			}
@@ -235,6 +236,9 @@ func TestParseScheduling(t *testing.T) {
 }
 
 func printStops(stops []Stop) {
+	if testing.Short() {
+		return
+	}
 	fmt.Println("Stops:")
 	for i, s := range stops {
 		fmt.Printf("\t%d - %s - %s\n", i+1, s.Name, s.schedulingUrl)

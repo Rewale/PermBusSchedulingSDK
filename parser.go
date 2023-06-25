@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,13 +49,15 @@ type (
 	}
 
 	Parser struct {
-		client *http.Client
+		client   *http.Client
+		reNumber *regexp.Regexp
 	}
 )
 
 func NewParser(client *http.Client) *Parser {
 	return &Parser{
-		client: client,
+		client:   client,
+		reNumber: regexp.MustCompile("[0-9]+"),
 	}
 }
 
@@ -119,12 +122,19 @@ func (p *Parser) parserResult(text string, routeType *RouteType) ([]*Route, erro
 				}
 				search.RouteName = strings.TrimSpace(search.RouteName)
 				search.RouteName = p.removeQuotes(search.RouteName)
+				p.extractNumberFromRouteName(search)
 				result = append(result, search)
 				search = nil
 				isRouteName = false
 			}
 		}
 	}
+}
+
+func (p *Parser) extractNumberFromRouteName(r *Route) {
+	n := p.reNumber.FindString(r.RouteName)
+	r.RouteName = strings.ReplaceAll(r.RouteName, fmt.Sprintf("%s, ", n), "")
+	r.Number, _ = strconv.Atoi(n)
 }
 
 func (p *Parser) removeQuotes(s string) string {
