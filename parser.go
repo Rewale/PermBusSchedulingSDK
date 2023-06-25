@@ -24,7 +24,7 @@ const (
 )
 
 const (
-	searchUrl = "https://www.m.gortransperm.ru/search/?q=%d%s"
+	searchUrl = "https://www.m.gortransperm.ru/search/?q=%s"
 	baseUrl   = "https://www.m.gortransperm.ru%s"
 	bus       = "Автобус"
 	tram      = "Трамвай"
@@ -285,8 +285,8 @@ func (p *Parser) parseStopSchedulingHtml(text string) ([]time.Time, error) {
 }
 
 // Search ищет на сайте расписания определенный номер маршрута c литералом и выдает список результатов
-func (p *Parser) Search(number int, literal string) ([]*Route, error) {
-	searchHtml, err := p.getHtmlPage(fmt.Sprintf(searchUrl, number, url.QueryEscape(literal)))
+func (p *Parser) Search(number string) ([]*Route, error) {
+	searchHtml, err := p.getHtmlPage(fmt.Sprintf(searchUrl, url.QueryEscape(number)))
 	if err != nil {
 		return nil, err
 	}

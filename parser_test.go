@@ -48,12 +48,10 @@ func TestParseSearchResult(t *testing.T) {
 		html        string
 		wantResults []Route
 		wantError   bool
-		Search      int
-		Literal     string
+		Search      string
 	}{
 		{
-			Search:    80,
-			Literal:   "",
+			Search:    "80",
 			name:      "Single search result",
 			html:      getTestHtml("testData/SingleSearchResult.html"),
 			wantError: false,
@@ -61,8 +59,7 @@ func TestParseSearchResult(t *testing.T) {
 				RouteName: "ДДК им. Кирова - ул. Милиционера Власова", Type: Bus}},
 		},
 		{
-			Search:    7,
-			Literal:   "Т",
+			Search:    "7Т",
 			name:      "Number with literal",
 			html:      getTestHtml("testData/7T.html"),
 			wantError: false,
@@ -71,8 +68,7 @@ func TestParseSearchResult(t *testing.T) {
 				RouteName: "Н.Крым - Центральный рынок", Type: Taxi}},
 		},
 		{
-			Search:    7,
-			Literal:   "т",
+			Search:    "7т",
 			name:      "Number with low literal",
 			html:      getTestHtml("testData/7T.html"),
 			wantError: false,
@@ -81,8 +77,7 @@ func TestParseSearchResult(t *testing.T) {
 				RouteName: "Н.Крым - Центральный рынок", Type: Taxi}},
 		},
 		{
-			Search:    12,
-			Literal:   "",
+			Search:    "12",
 			name:      "Multiple result",
 			html:      getTestHtml("testData/12.html"),
 			wantError: false,
@@ -105,9 +100,9 @@ func TestParseSearchResult(t *testing.T) {
 			var res []*Route
 			var err error
 			if testing.Short() {
-				res, err = newTestParser(200, testCase.html).Search(testCase.Search, testCase.Literal)
+				res, err = newTestParser(200, testCase.html).Search(testCase.Search)
 			} else {
-				res, err = NewParser(&http.Client{}).Search(testCase.Search, testCase.Literal)
+				res, err = NewParser(&http.Client{}).Search(testCase.Search)
 			}
 
 			if err == nil && testCase.wantError {
