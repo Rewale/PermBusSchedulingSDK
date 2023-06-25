@@ -62,13 +62,42 @@ func TestParseSearchResult(t *testing.T) {
 		},
 		{
 			Search:    7,
-			Literal:   "т",
+			Literal:   "Т",
 			name:      "Number with literal",
 			html:      getTestHtml("testData/7T.html"),
 			wantError: false,
 			wantResults: []Route{{routeHref: "/route/207/", Number: 7,
 				Literal:   "Т",
 				RouteName: "Н.Крым - Центральный рынок", Type: Taxi}},
+		},
+		{
+			Search:    7,
+			Literal:   "т",
+			name:      "Number with low literal",
+			html:      getTestHtml("testData/7T.html"),
+			wantError: false,
+			wantResults: []Route{{routeHref: "/route/207/", Number: 7,
+				Literal:   "Т",
+				RouteName: "Н.Крым - Центральный рынок", Type: Taxi}},
+		},
+		{
+			Search:    12,
+			Literal:   "",
+			name:      "Multiple result",
+			html:      getTestHtml("testData/12.html"),
+			wantError: false,
+			wantResults: []Route{
+				{
+					routeHref: "/route/812/", Number: 12,
+					Literal:   "",
+					RouteName: "Школа № 107 - Разгуляй", Type: Tram,
+				},
+				{
+					routeHref: "/route/12/", Number: 12,
+					Literal:   "",
+					RouteName: "Дворец культуры им. Гагарина - ОАО \"ПЗСП\"", Type: Bus,
+				},
+			},
 		},
 	}
 	for _, testCase := range testTable {
