@@ -2,7 +2,7 @@ package permbusscheduling
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -34,7 +34,7 @@ func newTestParser(statusCode int, body string) *Parser {
 
 			return &http.Response{
 				StatusCode: statusCode,
-				Body:       ioutil.NopCloser(strings.NewReader(body)),
+				Body:       io.NopCloser(strings.NewReader(body)),
 			}, nil
 		}),
 	}
