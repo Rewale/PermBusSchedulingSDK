@@ -55,7 +55,7 @@ func TestParseSearchResult(t *testing.T) {
 			name:      "Single search result",
 			html:      getTestHtml("testData/SingleSearchResult.html"),
 			wantError: false,
-			wantResults: []Route{{routeHref: "/route/80/", Number: 80, Literal: "",
+			wantResults: []Route{{RouteUrl: "/route/80/", Number: 80, Literal: "",
 				RouteName: "ДДК им. Кирова - ул. Милиционера Власова", Type: Bus}},
 		},
 		{
@@ -63,7 +63,7 @@ func TestParseSearchResult(t *testing.T) {
 			name:      "Number with literal",
 			html:      getTestHtml("testData/7T.html"),
 			wantError: false,
-			wantResults: []Route{{routeHref: "/route/207/", Number: 7,
+			wantResults: []Route{{RouteUrl: "/route/207/", Number: 7,
 				Literal:   "Т",
 				RouteName: "Н.Крым - Центральный рынок", Type: Taxi}},
 		},
@@ -72,7 +72,7 @@ func TestParseSearchResult(t *testing.T) {
 			name:      "Number with low literal",
 			html:      getTestHtml("testData/7T.html"),
 			wantError: false,
-			wantResults: []Route{{routeHref: "/route/207/", Number: 7,
+			wantResults: []Route{{RouteUrl: "/route/207/", Number: 7,
 				Literal:   "Т",
 				RouteName: "Н.Крым - Центральный рынок", Type: Taxi}},
 		},
@@ -83,12 +83,12 @@ func TestParseSearchResult(t *testing.T) {
 			wantError: false,
 			wantResults: []Route{
 				{
-					routeHref: "/route/812/", Number: 12,
+					RouteUrl: "/route/812/", Number: 12,
 					Literal:   "",
 					RouteName: "Школа № 107 - Разгуляй", Type: Tram,
 				},
 				{
-					routeHref: "/route/12/", Number: 12,
+					RouteUrl: "/route/12/", Number: 12,
 					Literal:   "",
 					RouteName: "Дворец культуры им. Гагарина - ОАО \"ПЗСП\"", Type: Bus,
 				},
@@ -118,7 +118,7 @@ func TestParseSearchResult(t *testing.T) {
 			}
 
 			for i := range testCase.wantResults {
-				if res[i].routeHref != testCase.wantResults[i].routeHref ||
+				if res[i].RouteUrl != testCase.wantResults[i].RouteUrl ||
 					res[i].RouteName != testCase.wantResults[i].RouteName ||
 					res[i].Type != testCase.wantResults[i].Type ||
 					res[i].Number != testCase.wantResults[i].Number {
@@ -152,7 +152,7 @@ func TestAllRoutes(t *testing.T) {
 		if r.RouteName == "" {
 			t.Fatal("Empty route name")
 		}
-		if r.routeHref == "" {
+		if r.RouteUrl == "" {
 			t.Fatal("Empty url")
 		}
 	}
@@ -176,7 +176,7 @@ func TestStops(t *testing.T) {
 		route       *Route
 	}{
 		{
-			route: &Route{routeHref: "/route/80/", Number: 80,
+			route: &Route{RouteUrl: "/route/80/", Number: 80,
 				RouteName: "80, ДДК им. Кирова - ул. Милиционера Власова", Type: Bus},
 			name: "Correct html",
 			html: getTestHtml("testData/Route80.html"),
@@ -199,7 +199,7 @@ func TestStops(t *testing.T) {
 			if testing.Short() {
 				res, err = parser.parseStops(ts.html)
 			} else {
-				res, err = parser.Stops(ts.route)
+				res, err = parser.Stops(ts.route.RouteUrl)
 			}
 
 			if err != nil {

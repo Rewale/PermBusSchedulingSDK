@@ -34,7 +34,7 @@ const (
 type (
 	Scheduling []time.Time
 	Route      struct {
-		routeHref string
+		RouteUrl  string
 		RouteName string
 		Type      RouteType
 		Number    int
@@ -100,7 +100,7 @@ func (p *Parser) parserResult(text string, routeType *RouteType) ([]*Route, erro
 				for _, attr := range t.Attr {
 					if attr.Key == "href" && strings.HasPrefix(attr.Val, "/route") {
 						search = new(Route)
-						search.routeHref = attr.Val
+						search.RouteUrl = attr.Val
 						if routeType != nil {
 							isRouteName = true
 						}
@@ -295,8 +295,8 @@ func (p *Parser) Search(number string) ([]*Route, error) {
 }
 
 // Stops выдает информацию о маршруте: его направления и остановки
-func (p *Parser) Stops(search *Route) ([]*Direction, error) {
-	stopsHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, search.routeHref))
+func (p *Parser) Stops(routeUrl string) ([]*Direction, error) {
+	stopsHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, routeUrl))
 	if err != nil {
 		return nil, err
 	}
