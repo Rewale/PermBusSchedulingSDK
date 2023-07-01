@@ -24,7 +24,7 @@ const (
 )
 
 const (
-	searchUrl = "https://www.m.gortransperm.ru/search/?q=%s"
+	searchUrl = "https://www.m.gortransperm.ru/search/?q=%d%s"
 	baseUrl   = "https://www.m.gortransperm.ru%s"
 	bus       = "Автобус"
 	tram      = "Трамвай"
@@ -285,8 +285,8 @@ func (p *Parser) parseStopSchedulingHtml(text string) ([]time.Time, error) {
 }
 
 // Search ищет на сайте расписания определенный номер маршрута c литералом и выдает список результатов
-func (p *Parser) Search(number string) ([]*Route, error) {
-	searchHtml, err := p.getHtmlPage(fmt.Sprintf(searchUrl, url.QueryEscape(number)))
+func (p *Parser) Search(number int, literal string) ([]*Route, error) {
+	searchHtml, err := p.getHtmlPage(fmt.Sprintf(searchUrl, number, url.QueryEscape(literal)))
 	if err != nil {
 		return nil, err
 	}
@@ -295,8 +295,8 @@ func (p *Parser) Search(number string) ([]*Route, error) {
 }
 
 // Stops выдает информацию о маршруте: его направления и остановки
-func (p *Parser) Stops(routeUrl string) ([]*Direction, error) {
-	stopsHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, routeUrl))
+func (p *Parser) Stops(route *Route) ([]*Direction, error) {
+	stopsHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, route.RouteUrl))
 	if err != nil {
 		return nil, err
 	}
