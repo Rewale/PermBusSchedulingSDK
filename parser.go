@@ -295,8 +295,8 @@ func (p *Parser) Search(number int, literal string) ([]*Route, error) {
 }
 
 // Stops выдает информацию о маршруте: его направления и остановки
-func (p *Parser) Stops(routeUrl string) ([]*Direction, error) {
-	stopsHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, routeUrl))
+func (p *Parser) Stops(route *Route) ([]*Direction, error) {
+	stopsHtml, err := p.getHtmlPage(fmt.Sprintf(baseUrl, route.RouteUrl))
 	if err != nil {
 		return nil, err
 	}

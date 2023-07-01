@@ -204,7 +204,7 @@ func TestStops(t *testing.T) {
 			if testing.Short() {
 				res, err = parser.parseStops(ts.html)
 			} else {
-				res, err = parser.Stops(ts.route.RouteUrl)
+				res, err = parser.Stops(ts.route)
 			}
 
 			if err != nil {
